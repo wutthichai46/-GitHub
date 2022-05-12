@@ -1,0 +1,245 @@
+Steps to Generate MLPerf Training V0.7 BERT Training Dataset 
+
+This file describes the steps how to generate the pretraining dataset (also used by MLPerf Training v0.7) for BERT. 
+
+Contact: 
+
+Wei Wang (wei.v.wang@intel.com)  
+
+Rajendrakumar Chinnaiyan (rajendrakumar.chinnaiyan@intel.com) 
+
+Date prepared and validated:
+August 2020 
+
+
+Background:  
+
+Originally BERT pretraining is known to be done with wikipedia and book corpus by Google. However, the Book Corpus are not generally available. Fortunately, the MLPerf community included BERT pretraining as one of the benchmarks and as a result of this inclusion, helped provided steps to do BERT pretraining with public dataset, e.g., wikipedia dataset.  
+
+ 
+
+Prerequisite: Python 3.7.6 and TensorFlow v1.15.2 (default TF is perfectly fine). Python3.7.6 is preferred as we have observed that Python 3.6.9 would lead to inconsistent data size. We confirmed with Google who was using Python3.7.6 and we reproduced their dataset size.  
+
+ 
+
+ 
+
+Step 0: Download MLPerf BERT reference folder  
+
+ 
+
+git clone https://github.com/mlperf/training.git 
+
+cd training 
+
+git checkout fb058e3849c25f6c718434e60906ea3b0cb0f67d  
+
+cd language_model/tensorflow/bert 
+
+ 
+
+Step 1: Download wikipedia 20200101 dataset with bz2 format 
+
+ 
+
+1. Download the wikipedia dump: https://dumps.wikimedia.org/enwiki/20200101/enwiki-20200101-pages-articles-multistream.xml.bz2 
+
+ 
+
+cd wiki 
+
+wget https://dumps.wikimedia.org/enwiki/20200101/enwiki-20200101-pages-articles-multistream.xml.bz2 
+
+bzip2 -d enwiki-20200101-pages-articles-multistream.xml.bz2 
+
+cd .. 
+
+ 
+
+Note: the above bz2 link is broken and is becoming a generic issue as evidenced by https://github.com/mlperf/training/issues/377 
+
+ 
+
+Workaround: Intel has fortunately downloaded the dataset when it was available. Please contact Intel to see how this dataset could potentially be shared. Alternatively, you can use the latest enwiki dataset that we did not yet test. 
+
+ 
+
+Step 2: Extract and get wikipedia 20200101 dataset with xml data format 
+
+We assume now you have obtained the above bz2 file and had run the above “bzip2” command and got the “enwiki-20200101-pages-articles-multistream.xml” file which is 71G 
+
+ 
+
+-rw-r--r-- 1 user user 75163254305 Jan  2  2020 enwiki-20200101-pages-articles-multistream.xml 
+
+-rw-r--r-- 1 user user 71G Jan  2  2020 enwiki-20200101-pages-articles-multistream.xml 
+
+ 
+
+Make sure the above file is in folder “wiki”  
+
+ 
+
+Step 3: Exact the above XML file into subfolders of wikipedia texts 
+
+ 
+
+git clone https://github.com/attardi/wikiextractor.git 
+
+cd wikiextractor 
+
+git checkout 16186e290d9eb0eb3a3784c6c0635a9ed7e855c3  
+
+python3 wikiextractor/WikiExtractor.py wiki/enwiki-20200101-pages-articles-multistream.xml # Results are placed in cleanup_scripts/text 
+
+After the above steps are done, the cleanup_scripts/text folder has the following  
+
+AA  AD  AG  AJ  AM  AP  AS  AV  AY  BB  BE  BH  BK  BN  BQ  BT  BW  BZ  CC  CF  CI  CL  CO  CR  CU  CX  DA  DD  DG  DJ  DM  DP  DS  DV  DY  EB  EE  EH  EK  EN  EQ  ET  EW  EZ  FC 
+
+AB  AE  AH  AK  AN  AQ  AT  AW  AZ  BC  BF  BI  BL  BO  BR  BU  BX  CA  CD  CG  CJ  CM  CP  CS  CV  CY  DB  DE  DH  DK  DN  DQ  DT  DW  DZ  EC  EF  EI  EL  EO  ER  EU  EX  FA  FD 
+
+AC  AF  AI  AL  AO  AR  AU  AX  BA  BD  BG  BJ  BM  BP  BS  BV  BY  CB  CE  CH  CK  CN  CQ  CT  CW  CZ  DC  DF  DI  DL  DO  DR  DU  DX  EA  ED  EG  EJ  EM  EP  ES  EV  EY  FB  FE  
+
+ 
+
+And the content of FE is the following :  
+
+ 
+
+-rw-r--r-- 1 user user 1048175 Apr 21 03:08 wiki_00 
+
+… 
+
+-rw-r--r-- 1 user user  398182 Apr 21 03:08 wiki_17 
+
+ 
+
+Step4: Convert the above folders of files to 500 text files (requires Python 3.7.6) 
+
+ 
+
+./process_wiki.sh  '/training/language_model/tensorflow/bert/cleanup_scripts/text/*/wiki_??' 
+
+ 
+
+The above process_wiki.sh is found in the clean_up script folder.  
+
+ 
+
+After the above step is finished, the results folder is generated containing 500 files named like part-xxxxx-of-00500. The size of part-00009-of-00500 should be exactly the following bytes.  
+
+ 
+
+-rw-r--r-- 1 root mlp_labs 27480337 May  7 14:53 part-00009-of-00500 
+
+  
+And the above FE folder becomes the following after the above steps 
+
+-rw-r--r-- 1 user user 1048175 Apr 21 03:08 wiki_00 
+
+-rw-r--r-- 1 user user  937905 Apr 21 13:09 wiki_00.1 
+
+-rw-r--r-- 1 user user  936557 Apr 21 13:13 wiki_00.2 
+
+-rw-r--r-- 1 user user  936180 Apr 21 13:14 wiki_00.3 
+
+… 
+
+-rw-r--r-- 1 user user  398182 Apr 21 03:08 wiki_17 
+
+-rw-r--r-- 1 user user  345526 Apr 21 13:09 wiki_17.1 
+
+-rw-r--r-- 1 user user  345343 Apr 21 13:13 wiki_17.2 
+
+-rw-r--r-- 1 user user  345189 Apr 21 13:14 wiki_17.3 
+
+ 
+
+ 
+
+Step 5: generate 500 TF record files from using default/vanilla TensorFlow v1.15.2  
+
+ 
+
+Dataset is compatible with TF 1.15 and TF 2.x. Suggest generating the dataset using default TF v1.15.2  
+
+ 
+
+Step 5.1: install TF v1.15.2 virtual environment 
+
+ 
+
+We suggest using virtualenv to quickly install TF v1.15.2, via the following steps 
+
+ 
+
+virtualenv -p /usr/bin/python3.7 TF-v1152-venv 
+
+. TF-v1152-venv/bin/activate 
+
+pip install tensorflow==1.15.2 
+
+ 
+
+Step 5.2: Download BERT vocab files  
+
+mkdir /MLPerf-Checkpoint  
+
+pushd /MLPerf-Checkpoint 
+
+Manually download all files to MLPerf-Checkpoint, including the vocab.txt file.  
+
+popd 
+
+ 
+
+Step 5.3: Run the following BERT scripts to generate tf record files  
+
+#!/bin/bash 
+
+ 
+
+cd  /training/language_model/tensorflow/bert 
+
+ls cleanup_results/results > 500 
+
+for i in `cat 500` 
+
+do  
+
+        echo $i 
+
+python3 create_pretraining_data.py --input_file=/training/language_model/tensorflow/bert/cleanup_scripts/results/$i --output_file=/training/language_model/tensorflow/bert/bert-tf-records/$i --vocab_file=/MLPerf-Checkpoint/vocab.txt --do_lower_case=True --max_seq_length=512 --max_predictions_per_seq=76 --masked_lm_prob=0.15 --random_seed=12345 --dupe_factor=10 
+
+done  
+
+ 
+
+After the above step is done, 500 BERT TF Record files are generated!  
+
+Example size of the TF Record Files are:  
+
+ 
+
+-rw-r--r-- 1 user user  529421736 May 18 13:29 part-00000-of-00500 
+
+-rw-r--r-- 1 user user  523570243 May 18 13:33 part-00001-of-00500 
+
+-rw-r--r-- 1 user user  522954855 May 18 13:36 part-00002-of-00500 
+
+-rw-r--r-- 1 user user  515448661 May 18 13:40 part-00003-of-00500 
+
+ 
+
+The file sizes should be identical to the above.  
+
+ 
+
+ 
+
+Reference:  
+
+ 
+
+[1] MLPerf Training v0.7 Reference BERT Implementation Page:  https://github.com/mlperf/training/tree/master/language_model/tensorflow/bert#download-and-preprocess-datasets , 2020 
+
